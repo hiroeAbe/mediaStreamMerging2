@@ -65,25 +65,35 @@
     var scrproc = audioctx.createScriptProcessor(bufsize);
     var filter = audioctx.createBiquadFilter();
     var osc = null;
-    var x = audioctx.createMediaStreamDestination();
+
+    function Setup() {
+      // WebAudio API 関係の初期化
+      console.log("setup");
+      this.output = audioctx.createMediaStreamDestination();
+      filter.type = ["lowpass","highpass","bandpass","lowshelf","highshelf","peaking","notch","allpass"][document.getElementById("type").selectedIndex];
+      filter.type = document.getElementById("type").selectedIndex;
+      filter.frequency.value = document.getElementById("freqlabel").innerHTML = parseFloat(document.getElementById("freq").value);
+      filter.Q.value = document.getElementById("qlabel").innerHTML = parseFloat(document.getElementById("q").value);
+      filter.gain.value = document.getElementById("gainlabel").innerHTML = parseFloat(document.getElementById("gain").value);
+
+    }
+
+    function SetupFilter(audioStream) {
+      this.mic = audioctx.createMediaStreamSource(audioStream);
+      // エフェクトを掛けて(ローパス)
+      this.mic.connect(this.filter);
+      this.filter.connect(this.output);
+    }
+    //this.output = audioctx.createMediaStreamDestination();
 
     scrproc.onaudioprocess = Process;
-    scrproc.connect(x);
-    x.connect(filter);
+    scrproc.connect(this.output);
+    this.output.connect(filter);
 
-    filter.connect(audioctx.destination);
+    filter.connect(this.output);
     filter.type = 0;
     filter.frequency.value = 5000;
     filter.Q.value = 5;
-
-    function Setup() {
-        filter.type = ["lowpass","highpass","bandpass","lowshelf","highshelf","peaking","notch","allpass"][document.getElementById("type").selectedIndex];
-        filter.type = document.getElementById("type").selectedIndex;
-        filter.frequency.value = document.getElementById("freqlabel").innerHTML = parseFloat(document.getElementById("freq").value);
-        filter.Q.value = document.getElementById("qlabel").innerHTML = parseFloat(document.getElementById("q").value);
-        filter.gain.value = document.getElementById("gainlabel").innerHTML = parseFloat(document.getElementById("gain").value);
-    }
-
 
 
     function Process(ev) {
@@ -111,12 +121,13 @@
             {audio: true, video: false},
             function(audioStream){
               Setup();
+              SetupFilter(audioStream);
               //Lowpass.setupFilter(audioStream);
               //Highpass.setupFilter(audioStream);
               // できあがったoutputをvideoStreamに合流させる
              //videoStream.addTrack(Lowpass.output.stream.getAudioTracks()[0]);
               //videoStream.addTrack(Highpass.output.stream.getAudioTracks()[0]);
-               videoStream.addTrack(getAudioTracks()[0]);
+               videoStream.addTrack(this.output.getAudioTracks()[0]);
               step2();
             },
             function(){ $('#step1-error').show();　} //エラー表示
