@@ -5,7 +5,7 @@
   <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8/jquery.min.js"></script>
   <script type="text/javascript" src="https://skyway.io/dist/0.3/peer.js"></script>
   <script type="text/javascript" src="lowpass.js"></script>
-  <script type="text/javascript" src="highpass.js"></script>
+
 
   <script>
 
@@ -55,8 +55,48 @@
       step1();
     });
 
+    window.AudioContext = window.webkitAudioContext||window.AudioContext;
+    var audioctx = new AudioContext();
+
+    var bufsize = 1024;
+    var play = 0;
+    var data = new Float32Array(bufsize);
+
+    var scrproc = audioctx.createScriptProcessor(bufsize);
+    var filter = audioctx.createBiquadFilter();
+    var osc = null;
+    var x = audioctx.createMediaStreamDestination();
+
+    scrproc.onaudioprocess = Process;
+    scrproc.connect(x);
+    x.connect(filter);
+
+    filter.connect(audioctx.destination);
+    filter.type = 0;
+    filter.frequency.value = 5000;
+    filter.Q.value = 5;
+
+    function Setup() {
+        filter.type = ["lowpass","highpass","bandpass","lowshelf","highshelf","peaking","notch","allpass"][document.getElementById("type").selectedIndex];
+        filter.type = document.getElementById("type").selectedIndex;
+        filter.frequency.value = document.getElementById("freqlabel").innerHTML = parseFloat(document.getElementById("freq").value);
+        filter.Q.value = document.getElementById("qlabel").innerHTML = parseFloat(document.getElementById("q").value);
+        filter.gain.value = document.getElementById("gainlabel").innerHTML = parseFloat(document.getElementById("gain").value);
+    }
+
+
+
+    function Process(ev) {
+        var buf0 = ev.outputBuffer.getChannelData(0);
+        var buf1 = ev.outputBuffer.getChannelData(1);
+        for(var i = 0; i < bufsize; ++i) {
+            buf0[i] = buf1[i] = (Math.random() - 0.5) * play;
+        }
+    }
+    //Setup();
+
     function step1 () {
-      Lowpass.setup();
+      //Lowpass.setup();
       //Highpass.setup();
       // (1) まずはビデオのみのストリームを取り出す
       navigator.getUserMedia(
@@ -132,57 +172,6 @@
     </div>
     <br/>
 
-    <script test="text/javascript">
-
-    window.AudioContext = window.webkitAudioContext||window.AudioContext;
-    var audioctx = new AudioContext();
-
-    var bufsize = 1024;
-    var play = 0;
-    var data = new Float32Array(bufsize);
-
-    var scrproc = audioctx.createScriptProcessor(bufsize);
-    var filter = audioctx.createBiquadFilter();
-    var osc = null;
-    scrproc.onaudioprocess = Process;
-    scrproc.connect(filter);
-
-    filter.connect(audioctx.destination);
-    filter.type = 0;
-    filter.frequency.value = 5000;
-    filter.Q.value = 5;
-
-    function Setup() {
-        filter.type = ["lowpass","highpass","bandpass","lowshelf","highshelf","peaking","notch","allpass"][document.getElementById("type").selectedIndex];
-        filter.type = document.getElementById("type").selectedIndex;
-        filter.frequency.value = document.getElementById("freqlabel").innerHTML = parseFloat(document.getElementById("freq").value);
-        filter.Q.value = document.getElementById("qlabel").innerHTML = parseFloat(document.getElementById("q").value);
-        filter.gain.value = document.getElementById("gainlabel").innerHTML = parseFloat(document.getElementById("gain").value);
-    }
-
-    function Play() {
-        if(play) {
-            play = 0;
-        }
-        else {
-            if(osc == null){
-                osc = audioctx.createMediaStreamDestination();
-                osc.start();
-            }
-            play = 1;
-        }
-    }
-
-    function Process(ev) {
-        var buf0 = ev.outputBuffer.getChannelData(0);
-        var buf1 = ev.outputBuffer.getChannelData(1);
-        for(var i = 0; i < bufsize; ++i) {
-            buf0[i] = buf1[i] = (Math.random() - 0.5) * play;
-        }
-    }
-    //Setup();
-
-    </script>
 
 
 
